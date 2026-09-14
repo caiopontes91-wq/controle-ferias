@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Férias — ABFF Advogados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @media print{
+    .lock-wrap, .header-actions, .view-switch, .tabs, .cal-nav, #agendaView, .icon-btn, .cal-legend{display:none !important;}
+    body{background:#fff;}
+    .person-card{break-inside:avoid; border:1px solid #ccc;}
+    main{padding:10px 20px;}
+    .legal-note{break-inside:avoid;}
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --paper:#F1E8D5;
+    --surface:#FFFDF8;
+    --ink:#1E2A38;
+    --ink-soft:#5C6773;
+    --line:#E4E0D6;
+    --brand:#2F4B3C;
+    --brand-tint:#E7EEE9;
+    --brand-dark:#1F332A;
+    --ok:#3E7A4C;
+    --ok-tint:#E6F0E8;
+    --warn:#B4791E;
+    --warn-tint:#FBF0DD;
+    --bad:#B0413E;
+    --bad-tint:#FAE7E6;
+    --accrue:#767A40;
+    --accrue-tint:#EEEEDC;
+    --holiday:#8B4E9E;
+    --holiday-tint:#F1E7F4;
+    --event:#A6533F;
+    --event-tint:#F5E5E0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Lora',serif; margin:0;}
+
+  /* ---------- lock screen ---------- */
+  .lock-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .lock-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:36px 32px; width:100%; max-width:380px; text-align:center;
+  }
+  .lock-card .firm{font-size:12px; letter-spacing:.02em; color:var(--brand); font-weight:700;}
+  .lock-card h2{font-size:20px; margin-top:6px; margin-bottom:6px;}
+  .lock-card p{font-size:13px; color:var(--ink-soft); margin-bottom:20px; line-height:1.5;}
+  .lock-card input{
+    width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:8px;
+    font-size:14px; font-family:'Inter',sans-serif; text-align:center; margin-bottom:10px; background:var(--paper);
+  }
+  .lock-error{font-size:12.5px; color:var(--bad); margin-bottom:8px; min-height:16px;}
+  .lock-hint{font-size:11.5px; color:var(--ink-soft); margin-top:16px; line-height:1.5;}
+
+  /* ---------- header ---------- */
+  header.top{
+    padding:36px 40px 28px;
+    border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+  }
+  .brand-mark{display:flex; flex-direction:column; gap:4px;}
+  .brand-mark .firm{font-size:12.5px; letter-spacing:.02em; color:var(--brand); font-weight:600;}
+  .brand-mark h1{font-size:28px; color:var(--ink); font-weight:600;}
+  .brand-mark .tagline{font-size:13.5px; color:var(--ink-soft); font-style:italic; font-family:'Lora',serif;}
+  .header-actions{display:flex; gap:10px; align-items:center;}
+  button.primary{
+    background:var(--brand); color:#fff; border:none; padding:12px 20px;
+    border-radius:7px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  button.primary:hover{background:var(--brand-dark);}
+  .icon-round{
+    width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--surface);
+    cursor:pointer; font-size:16px; color:var(--ink-soft); display:flex; align-items:center; justify-content:center;
+  }
+  .icon-round:hover{border-color:var(--brand); color:var(--brand);}
+
+  main{padding:28px 40px 60px; max-width:1180px; margin:0 auto;}
+
+  /* ---------- view switch ---------- */
+  .view-switch{display:flex; gap:8px; margin-bottom:22px;}
+  .view-btn{
+    padding:9px 18px; border-radius:8px; border:1px solid var(--line); background:var(--surface);
+    font-size:13.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+  }
+  .view-btn.active{background:var(--ink); border-color:var(--ink); color:#fff;}
+
+  /* ---------- summary ---------- */
+  .summary{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:26px;}
+  .summary .card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+  .summary .card .num{font-family:'Lora',serif; font-size:26px; font-weight:600;}
+  .summary .card .label{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .summary .card.alert .num{color:var(--bad);}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+  .tab{
+    padding:9px 16px; border-radius:20px; border:1px solid var(--line); background:var(--surface);
+    font-size:13.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;
+  }
+  .tab.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+
+  /* ---------- legal note ---------- */
+  .legal-note{
+    background:var(--brand-tint); border:1px solid #cfe0d3; border-radius:10px;
+    padding:14px 18px; margin-bottom:22px; font-size:13.5px; color:var(--brand-dark); line-height:1.55;
+  }
+  .legal-note b{font-weight:700;}
+
+  /* ---------- person cards ---------- */
+  .empty{
+    text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:14.5px;
+    background:var(--surface); border:1px dashed var(--line); border-radius:12px;
+  }
+  .person-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:20px 22px; margin-bottom:14px;
+  }
+  .person-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;}
+  .person-head .who h3{font-size:17.5px; font-weight:600;}
+  .person-head .who .meta{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px;
+    font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  .badge.ok{background:var(--ok-tint); color:var(--ok);}
+  .badge.warn{background:var(--warn-tint); color:var(--warn);}
+  .badge.bad{background:var(--bad-tint); color:var(--bad);}
+  .badge.accrue{background:var(--accrue-tint); color:var(--accrue);}
+  .badge.neutral{background:#EEEEEA; color:var(--ink-soft);}
+  .card-actions{display:flex; gap:8px;}
+  .icon-btn{
+    border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:6px 10px;
+    font-size:12.5px; cursor:pointer; color:var(--ink-soft); font-family:'Inter',sans-serif;
+  }
+  .icon-btn:hover{border-color:var(--brand); color:var(--brand);}
+
+  .timeline{margin-top:16px;}
+  .timeline .row{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-bottom:5px;}
+  .bar-track{height:9px; background:#EDEBE3; border-radius:6px; overflow:hidden; position:relative;}
+  .bar-fill{height:100%; border-radius:6px;}
+  .fill-ok{background:var(--ok);}
+  .fill-warn{background:var(--warn);}
+  .fill-bad{background:var(--bad);}
+  .fill-accrue{background:var(--accrue);}
+
+  .detail-line{margin-top:12px; font-size:13px; color:var(--ink); line-height:1.6;}
+  .detail-line .lbl{color:var(--ink-soft);}
+
+  .risk-flag{
+    margin-top:12px; background:var(--bad-tint); color:var(--bad); border-radius:8px;
+    padding:10px 14px; font-size:12.5px; font-weight:600; line-height:1.5;
+  }
+
+  /* ---------- calendar / agenda ---------- */
+  .cal-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .cal-header h2{font-size:19px; font-weight:600;}
+  .cal-nav{display:flex; gap:8px; align-items:center;}
+  .cal-nav button{
+    width:34px; height:34px; border-radius:8px; border:1px solid var(--line); background:var(--surface);
+    cursor:pointer; font-size:14px; color:var(--ink-soft);
+  }
+  .cal-nav button:hover{border-color:var(--brand); color:var(--brand);}
+  .cal-legend{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; font-size:12px; color:var(--ink-soft);}
+  .cal-legend .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle;}
+  .cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:22px;
+  }
+  .cal-dow{font-size:11px; font-weight:700; color:var(--ink-soft); text-align:center; padding-bottom:4px;}
+  .cal-cell{
+    background:var(--surface); border:1px solid var(--line); border-radius:8px; min-height:88px;
+    padding:6px 6px 8px; font-size:11px; position:relative;
+  }
+  .cal-cell.out{background:#EFEDE6; border-color:#EFEDE6;}
+  .cal-cell .daynum{font-weight:700; font-size:12px; color:var(--ink);}
+  .cal-cell.out .daynum{color:#B7B2A4;}
+  .cal-cell.holiday{background:var(--holiday-tint); border-color:#e0cce7;}
+  .cal-cell.office-event{background:var(--event-tint); border-color:#e6cac0;}
+  .cal-cell .holiday-tag{
+    font-size:9.5px; color:var(--holiday); font-weight:700; margin-top:2px; line-height:1.3; display:block;
+  }
+  .cal-cell .event-tag{
+    font-size:9.5px; color:var(--event); font-weight:700; margin-top:2px; line-height:1.3; display:block;
+  }
+  .cal-chip{
+    margin-top:3px; font-size:9.5px; font-weight:600; padding:2px 5px; border-radius:4px;
+    color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .chip-clt{background:var(--accrue);}
+  .chip-estagio{background:var(--brand);}
+  .chip-autonomo{background:var(--warn);}
+  .holiday-list{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+  .holiday-list h3{font-size:14px; margin-bottom:10px;}
+  .holiday-list .hrow{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--line);}
+  .holiday-list .hrow:last-child{border-bottom:none;}
+  .holiday-list .htag{font-size:10.5px; color:var(--ink-soft);}
+
+  /* ---------- modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(30,42,56,.45); display:none;
+    align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:var(--surface); border-radius:14px; padding:28px 28px 24px; width:100%; max-width:480px;
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal h2{font-size:19px; margin-bottom:18px; font-weight:600;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-bottom:5px;}
+  .field input, .field select{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:7px;
+    font-size:14px; font-family:'Inter',sans-serif; color:var(--ink); background:var(--paper);
+  }
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .field-check{display:flex; align-items:flex-start; gap:9px; font-size:13px; color:var(--ink); line-height:1.45; margin-top:4px;}
+  .field-check input{width:auto; margin-top:3px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+  button.ghost{background:none; border:1px solid var(--line); padding:10px 16px; border-radius:7px; cursor:pointer; font-size:14px; color:var(--ink-soft); font-family:'Inter',sans-serif;}
+  .hint{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+
+  @media (max-width:760px){
+    header.top{padding:24px 20px;}
+    main{padding:20px 20px 50px;}
+    .summary{grid-template-columns:repeat(2,1fr);}
+    .cal-cell{min-height:64px; font-size:10px;}
+    .field-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ APP ============ -->
+<!-- ============ LOCK SCREEN ============ -->
+<div class="lock-wrap" id="lockWrap">
+  <div class="lock-card">
+    <h2 id="lockTitle">Acesso ao painel</h2>
+    <p id="lockSubtitle">Digite a senha para abrir o controle de férias.</p>
+    <input type="password" id="lockPass" placeholder="Senha">
+    <input type="password" id="lockPass2" placeholder="Confirmar senha" style="display:none;">
+    <div class="lock-error" id="lockError"></div>
+    <button class="primary" style="width:100%;" onclick="submitLock()">Entrar</button>
+    <div class="lock-hint">Essa senha protege o acesso neste navegador/computador — não impede que o link seja aberto em outro aparelho.</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" style="display:none;">
+<header class="top">
+  <div class="brand-mark">
+    <h1>Controle de Férias e Recesso</h1>
+    <span class="tagline">Direito Descomplicado para a vida real</span>
+  </div>
+  <div class="header-actions">
+    <button class="icon-round" title="Alterar senha" onclick="openPassModal()">⚙</button>
+    <button class="icon-btn" style="padding:11px 14px;" onclick="exportBackup()">Baixar backup</button>
+    <label class="icon-btn" style="padding:11px 14px; cursor:pointer;">
+      Importar backup
+      <input type="file" accept="application/json" onchange="importBackup(event)" style="display:none;">
+    </label>
+    <button class="icon-btn" style="padding:11px 14px;" onclick="exportExcel()">Exportar Excel</button>
+
+    <button class="icon-btn" style="padding:11px 14px;" onclick="window.print()">Exportar PDF</button>
+    <button class="primary" onclick="openModal()">+ Adicionar colaborador</button>
+  </div>
+</header>
+
+<main>
+  <div class="view-switch">
+    <div class="view-btn active" data-v="painel">Painel</div>
+    <div class="view-btn" data-v="agenda">Agenda</div>
+  </div>
+
+  <!-- ---------- PAINEL VIEW ---------- -->
+  <div id="painelView">
+    <div class="summary" id="summary"></div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-f="todos">Todos</div>
+      <div class="tab" data-f="clt">CLT</div>
+      <div class="tab" data-f="estagio">Estágio</div>
+      <div class="tab" data-f="autonomo">Autônomo</div>
+    </div>
+
+    <div class="legal-note" id="legalNote"></div>
+
+    <div id="list"></div>
+  </div>
+
+  <!-- ---------- AGENDA VIEW ---------- -->
+  <div id="agendaView" style="display:none;">
+    <div class="tabs" id="tabsAgenda">
+      <div class="tab active" data-f="todos">Todos</div>
+      <div class="tab" data-f="clt">CLT</div>
+      <div class="tab" data-f="estagio">Estágio</div>
+      <div class="tab" data-f="autonomo">Autônomo</div>
+    </div>
+    <div class="cal-header">
+      <h2 id="calMonthLabel"></h2>
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <button onclick="changeMonth(1)">›</button>
+        <button class="icon-btn" style="padding:9px 14px; margin-left:6px;" onclick="openEventModal()">+ Adicionar evento</button>
+      </div>
+    </div>
+    <div class="cal-legend">
+      <span><span class="dot" style="background:var(--accrue);"></span>CLT</span>
+      <span><span class="dot" style="background:var(--brand);"></span>Estágio</span>
+      <span><span class="dot" style="background:var(--warn);"></span>Autônomo</span>
+      <span><span class="dot" style="background:var(--holiday);"></span>Feriado / ponto facultativo</span>
+      <span><span class="dot" style="background:var(--event);"></span>Evento do escritório</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="holiday-list" id="holidayList"></div>
+  </div>
+</main>
+</div>
+
+<!-- ============ MODAL: colaborador ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Adicionar colaborador</h2>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="fName" placeholder="Nome completo">
+    </div>
+    <div class="field">
+      <label>Cargo / setor (opcional)</label>
+      <input type="text" id="fRole" placeholder="Ex.: Analista financeiro">
+    </div>
+    <div class="field">
+      <label>Tipo de contrato</label>
+      <select id="fType" onchange="onTypeChange()">
+        <option value="clt">CLT</option>
+        <option value="estagio">Estágio</option>
+        <option value="autonomo">Autônomo / PJ</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="admissionLabel">Data de admissão</label>
+      <input type="date" id="fAdmission">
+    </div>
+    <div class="field" id="lastReturnField">
+      <label>Retorno das últimas férias (deixe em branco se ainda não tirou)</label>
+      <input type="date" id="fLastReturn">
+      <div class="hint">Usamos essa data para recalcular o próximo período aquisitivo.</div>
+    </div>
+    <div class="field" id="autonomoNote" style="display:none;">
+      <div class="hint">Autônomo não tem férias por lei — o painel só usa a data de início para monitorar o vínculo contratual.</div>
+    </div>
+    <div class="field" id="diasContratadosField" style="display:none;">
+      <label>Dias de descanso combinados em contrato (opcional)</label>
+      <input type="number" id="fDiasContratados" min="0" step="1" placeholder="Ex.: 30">
+      <div class="hint">Se preenchido, o painel calcula o saldo desses dias, cruzando com o período marcado e os eventos do escritório aplicáveis a autônomos.</div>
+    </div>
+    <div class="field" id="riskField" style="display:none;">
+      <div class="field-check">
+        <input type="checkbox" id="fRisk">
+        <span>A prestação de serviço é contínua, com subordinação e pessoalidade (o autônomo segue horários/ordens fixas e não pode se fazer substituir)</span>
+      </div>
+    </div>
+    <div class="field" id="abonoField" style="display:none;">
+      <div class="field-check">
+        <input type="checkbox" id="fAbono">
+        <span>Optou por vender 1/3 das férias (abono pecuniário) — restam 20 dias de descanso efetivo</span>
+      </div>
+      <div class="hint">O pedido de abono precisa ser feito até 15 dias antes do fim do período aquisitivo (art. 143 da CLT).</div>
+    </div>
+    <div class="field">
+      <label id="vacLabel">Fase 1 — período marcado (opcional)</label>
+      <div class="field-row">
+        <input type="date" id="fVacStart" placeholder="Início">
+        <input type="date" id="fVacEnd" placeholder="Fim">
+      </div>
+    </div>
+    <div class="field">
+      <label>Fase 2 — parcelamento (opcional)</label>
+      <div class="field-row">
+        <input type="date" id="fVac2Start" placeholder="Início">
+        <input type="date" id="fVac2End" placeholder="Fim">
+      </div>
+      <div class="hint">Os dias fora do recesso institucional podem ser parcelados em até 2 vezes, com no mínimo 5 dias em cada fase.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="closeModal()">Cancelar</button>
+      <button class="primary" onclick="saveP()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: alterar senha ============ -->
+<div class="overlay" id="passOverlay">
+  <div class="modal" style="max-width:380px;">
+    <h2>Alterar senha</h2>
+    <div class="field">
+      <label>Senha atual</label>
+      <input type="password" id="pOld">
+    </div>
+    <div class="field">
+      <label>Nova senha</label>
+      <input type="password" id="pNew">
+    </div>
+    <div class="field">
+      <label>Confirmar nova senha</label>
+      <input type="password" id="pNew2">
+    </div>
+    <div class="lock-error" id="passError"></div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="closePassModal()">Cancelar</button>
+      <button class="primary" onclick="changePassword()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: evento do escritório ============ -->
+<div class="overlay" id="eventOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h2>Adicionar evento do escritório</h2>
+    <div class="field">
+      <label>Nome do evento</label>
+      <input type="text" id="eName" placeholder="Ex.: Recesso do Judiciário">
+    </div>
+    <div class="field">
+      <div class="field-row">
+        <div>
+          <label>Início</label>
+          <input type="date" id="eStart">
+        </div>
+        <div>
+          <label>Fim</label>
+          <input type="date" id="eEnd">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Afeta o descanso de</label>
+      <div class="field-check"><input type="checkbox" id="eEstagio" checked><span>Estágio (recesso)</span></div>
+      <div class="field-check"><input type="checkbox" id="eAutonomo" checked><span>Autônomo / PJ (descanso combinado)</span></div>
+      <div class="field-check"><input type="checkbox" id="eClt"><span>CLT (apenas para referência — não altera o prazo legal de férias)</span></div>
+      <div class="hint">Marque quem o escritório considera "de folga" nesse período. Isso é só informativo no calendário — não recalcula prazos automaticamente.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" onclick="closeEventModal()">Cancelar</button>
+      <button class="primary" onclick="saveEvent()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let people = [];
+let officeEvents = [];
+let editingId = null;
+let editingEventId = null;
+let currentFilter = 'todos';
+let currentView = 'painel';
+let calDate = new Date();
+const DAY = 86400000;
+
+const legalTexts = {
+  todos: "Cada tipo de contrato segue uma regra diferente: CLT tem direito às férias (30 dias, com prazo de gozo controlado por lei); estágio tem recesso, não férias; autônomo não tem previsão legal de descanso — o que existir depende do contrato firmado.",
+  clt: "<b>CLT:</b> após 12 meses trabalhados (período aquisitivo), o colaborador tem direito a 30 dias de férias, que devem ser usados nos 12 meses seguintes (período concessivo). Perder esse prazo obriga o pagamento em dobro (art. 137 da CLT) — por isso os alertas aparecem antes do vencimento.",
+  estagio: "<b>Estágio (Lei 11.788/2008):</b> não é férias, é recesso — 30 dias a cada 12 meses de estágio, proporcional se o período completado for menor. O contrato de estágio não pode ultrapassar 2 anos, salvo para estagiário com deficiência.",
+  autonomo: "<b>Autônomo / PJ:</b> não existe férias por lei, pois não há vínculo empregatício. Qualquer período de descanso depende do que for combinado em contrato. Atenção: se a prestação for contínua, com subordinação e pessoalidade, isso pode configurar vínculo empregatício disfarçado — um risco trabalhista real para quem contrata."
+};
+
+/* ---------------- storage (local, neste navegador) ---------------- */
+const STORAGE_KEY = 'abff-controle-ferias-colaboradores';
+const EVENTS_KEY = 'abff-controle-ferias-eventos';
+const PASS_KEY = 'abff-controle-ferias-senha';
+
+function loadAll(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    people = raw ? JSON.parse(raw) : [];
+  }catch(e){ people = []; }
+  try{
+    const rawE = localStorage.getItem(EVENTS_KEY);
+    officeEvents = rawE ? JSON.parse(rawE) : [];
+  }catch(e){ officeEvents = []; }
+  setupLockScreen();
+}
+
+function persistPeople(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(people)); }
+  catch(e){ console.error('Falha ao salvar no navegador', e); alert('Não foi possível salvar. O navegador pode estar sem espaço de armazenamento ou em modo privado.'); }
+}
+
+function persistEvents(){
+  try{ localStorage.setItem(EVENTS_KEY, JSON.stringify(officeEvents)); }
+  catch(e){ console.error('Falha ao salvar eventos', e); }
+}
+
+
+/* ---------------- simple obfuscation (NOT real cryptography) ---------------- */
+function obf(s){ try{ return btoa(unescape(encodeURIComponent(s))); }catch(e){ return s; } }
+function deobf(s){ try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return s; } }
+
+/* ---------------- lock screen (senha salva neste navegador) ---------------- */
+function getStoredPass(){
+  try{ return localStorage.getItem(PASS_KEY); }catch(e){ return null; }
+}
+function setStoredPass(plain){
+  try{ localStorage.setItem(PASS_KEY, obf(plain)); }catch(e){ console.error('Falha ao salvar senha', e); }
+}
+
+function setupLockScreen(){
+  const title = document.getElementById('lockTitle');
+  const subtitle = document.getElementById('lockSubtitle');
+  const pass2 = document.getElementById('lockPass2');
+  const stored = getStoredPass();
+  if(!stored){
+    title.textContent = 'Criar senha de acesso';
+    subtitle.textContent = 'Ainda não há senha definida neste navegador. Crie uma para proteger o acesso.';
+    pass2.style.display = 'block';
+  } else {
+    title.textContent = 'Acesso ao painel';
+    subtitle.textContent = 'Digite a senha para abrir o controle de férias.';
+    pass2.style.display = 'none';
+  }
+}
+
+function submitLock(){
+  const err = document.getElementById('lockError');
+  const p1 = document.getElementById('lockPass').value;
+  err.textContent = '';
+  const stored = getStoredPass();
+
+  if(!stored){
+    const p2 = document.getElementById('lockPass2').value;
+    if(!p1 || p1.length < 4){ err.textContent = 'Use pelo menos 4 caracteres.'; return; }
+    if(p1 !== p2){ err.textContent = 'As senhas não coincidem.'; return; }
+    setStoredPass(p1);
+    unlockApp();
+    return;
+  }
+
+  if(deobf(stored) === p1){
+    unlockApp();
+  } else {
+    err.textContent = 'Senha incorreta.';
+  }
+}
+
+function unlockApp(){
+  document.getElementById('lockWrap').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  render();
+}
+
+function openPassModal(){
+  document.getElementById('pOld').value = '';
+  document.getElementById('pNew').value = '';
+  document.getElementById('pNew2').value = '';
+  document.getElementById('passError').textContent = '';
+  document.getElementById('passOverlay').classList.add('show');
+}
+function closePassModal(){ document.getElementById('passOverlay').classList.remove('show'); }
+
+function changePassword(){
+  const err = document.getElementById('passError');
+  const old = document.getElementById('pOld').value;
+  const n1 = document.getElementById('pNew').value;
+  const n2 = document.getElementById('pNew2').value;
+  const stored = getStoredPass();
+  if(!stored || deobf(stored) !== old){ err.textContent = 'Senha atual incorreta.'; return; }
+  if(!n1 || n1.length < 4){ err.textContent = 'A nova senha precisa ter ao menos 4 caracteres.'; return; }
+  if(n1 !== n2){ err.textContent = 'As senhas não coincidem.'; return; }
+  setStoredPass(n1);
+  closePassModal();
+}
+
+/* ---------------- date helpers ---------------- */
+function addMonths(date, n){ const d = new Date(date); d.setMonth(d.getMonth()+n); return d; }
+function fmt(d){ return new Date(d).toLocaleDateString('pt-BR'); }
+function daysBetween(a,b){ return Math.round((new Date(b) - new Date(a)) / DAY); }
+function toISO(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()).toISOString().slice(0,10); }
+
+function personRanges(p){
+  if(p.vacPhases && p.vacPhases.length){
+    return p.vacPhases.filter(ph=>ph.start && ph.end).map(ph=>[ph.start, ph.end]);
+  }
+  if(p.vacStart && p.vacEnd) return [[p.vacStart, p.vacEnd]];
+  return [];
+}
+
+function computeCLTorEstagio(p){
+  const start = p.lastReturn || p.admission;
+  const aqStart = new Date(start);
+  const aqEnd = addMonths(aqStart, 12);
+  aqEnd.setDate(aqEnd.getDate()-1);
+  const conStart = new Date(aqEnd);
+  conStart.setDate(conStart.getDate()+1);
+  const conEnd = addMonths(aqStart, 24);
+  conEnd.setDate(conEnd.getDate()-1);
+
+  const today = new Date();
+  let status, pct, remaining;
+
+  if (today < aqEnd){
+    status = 'accrue';
+    remaining = daysBetween(today, aqEnd);
+    pct = Math.min(100, Math.max(0, (daysBetween(aqStart,today)/daysBetween(aqStart,aqEnd))*100));
+  } else if (today <= conEnd){
+    remaining = daysBetween(today, conEnd);
+    pct = Math.min(100, Math.max(0,(daysBetween(conStart,today)/daysBetween(conStart,conEnd))*100));
+    status = remaining <= 60 ? 'warn' : 'ok';
+  } else {
+    status = 'bad';
+    remaining = daysBetween(conEnd, today) * -1;
+    pct = 100;
+  }
+
+  const totalDias = (p.type === 'clt' && p.abono) ? 20 : 30;
+  const ranges = [...personRanges(p)];
+  officeEvents.filter(ev => ev.appliesTo.includes(p.type)).forEach(ev => ranges.push([ev.start, ev.end]));
+  const usedDays = collectUsedDays(toISO(conStart), toISO(conEnd), ranges);
+  const saldo = Math.max(0, totalDias - usedDays);
+
+  return {aqStart, aqEnd, conStart, conEnd, status, pct, remaining, totalDias, usedDays, saldo};
+}
+
+/* ---------------- saldo de dias (cruza período marcado + eventos do escritório) ---------------- */
+function clampRange(s, e, rs, re){
+  const start = s > rs ? s : rs;
+  const end = e < re ? e : re;
+  if(start > end) return null;
+  return [start, end];
+}
+
+function collectUsedDays(windowStart, windowEnd, ranges){
+  const used = new Set();
+  ranges.forEach(r=>{
+    if(!r || !r[0] || !r[1]) return;
+    const clamped = clampRange(r[0], r[1], windowStart, windowEnd);
+    if(!clamped) return;
+    let d = new Date(clamped[0] + 'T00:00:00');
+    const end = new Date(clamped[1] + 'T00:00:00');
+    while(d <= end){
+      used.add(toISO(d));
+      d.setDate(d.getDate()+1);
+    }
+  });
+  return used.size;
+}
+
+function currentCycleWindow(admissionISO){
+  const start = new Date(admissionISO + 'T00:00:00');
+  const today = new Date();
+  let cursor = new Date(start);
+  while(addMonths(cursor,12) <= today){ cursor = addMonths(cursor,12); }
+  const winEnd = addMonths(cursor,12);
+  winEnd.setDate(winEnd.getDate()-1);
+  return [toISO(cursor), toISO(winEnd)];
+}
+
+function computeAutonomoSaldo(p){
+  if(!p.diasContratados) return null;
+  const [winStart, winEnd] = currentCycleWindow(p.admission);
+  const ranges = [...personRanges(p)];
+  officeEvents.filter(ev => ev.appliesTo.includes('autonomo')).forEach(ev => ranges.push([ev.start, ev.end]));
+  const usedDays = collectUsedDays(winStart, winEnd, ranges);
+  const saldo = Math.max(0, Number(p.diasContratados) - usedDays);
+  return { winStart, winEnd, usedDays, saldo, total: Number(p.diasContratados) };
+}
+
+function statusLabel(type, s){
+  const labels = {
+    accrue: 'Em formação',
+    ok: type==='estagio' ? 'Apto ao recesso' : 'Apto a gozar',
+    warn: 'Atenção — prazo próximo',
+    bad: type==='estagio' ? 'Recesso vencido' : 'Férias vencidas'
+  };
+  return labels[s];
+}
+
+/* ---------------- holidays (feriados nacionais) ---------------- */
+function easter(year){
+  const a=year%19, b=Math.floor(year/100), c=year%100, d=Math.floor(b/4), e=b%4,
+        f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30,
+        i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451),
+        month=Math.floor((h+l-7*m+114)/31), day=((h+l-7*m+114)%31)+1;
+  return new Date(year, month-1, day);
+}
+function shift(date, days){ const d = new Date(date); d.setDate(d.getDate()+days); return d; }
+
+function holidaysForYear(year){
+  const e = easter(year);
+  const list = [
+    {date:new Date(year,0,1), name:'Confraternização Universal', kind:'feriado'},
+    {date:shift(e,-47), name:'Carnaval', kind:'facultativo'},
+    {date:shift(e,-46), name:'Carnaval', kind:'facultativo'},
+    {date:shift(e,-2), name:'Sexta-feira Santa', kind:'feriado'},
+    {date:new Date(year,3,21), name:'Tiradentes', kind:'feriado'},
+    {date:new Date(year,4,1), name:'Dia do Trabalho', kind:'feriado'},
+    {date:shift(e,60), name:'Corpus Christi', kind:'facultativo'},
+    {date:new Date(year,8,7), name:'Independência do Brasil', kind:'feriado'},
+    {date:new Date(year,9,12), name:'Nossa Senhora Aparecida', kind:'feriado'},
+    {date:new Date(year,10,2), name:'Finados', kind:'feriado'},
+    {date:new Date(year,10,15), name:'Proclamação da República', kind:'feriado'},
+    {date:new Date(year,10,20), name:'Consciência Negra', kind:'feriado'},
+    {date:new Date(year,11,25), name:'Natal', kind:'feriado'},
+  ];
+  const map = {};
+  list.forEach(h=>{ map[toISO(h.date)] = h; });
+  return map;
+}
+
+/* ---------------- render: painel ---------------- */
+function render(){
+  renderSummary();
+  renderList();
+  renderCalendar();
+}
+
+function renderSummary(){
+  const total = people.length;
+  const clt = people.filter(p=>p.type==='clt').length;
+  const estagio = people.filter(p=>p.type==='estagio').length;
+  const autonomo = people.filter(p=>p.type==='autonomo').length;
+  let alerts = 0;
+  people.forEach(p=>{
+    if(p.type==='autonomo'){ if(p.risk) alerts++; }
+    else{ const c = computeCLTorEstagio(p); if(c.status==='warn' || c.status==='bad') alerts++; }
+  });
+  document.getElementById('summary').innerHTML = `
+    <div class="card"><div class="num">${total}</div><div class="label">Colaboradores</div></div>
+    <div class="card"><div class="num">${clt}</div><div class="label">CLT</div></div>
+    <div class="card"><div class="num">${estagio}</div><div class="label">Estágio</div></div>
+    <div class="card"><div class="num">${autonomo}</div><div class="label">Autônomo / PJ</div></div>
+    <div class="card ${alerts>0?'alert':''}"><div class="num">${alerts}</div><div class="label">Alertas pendentes</div></div>
+  `;
+}
+
+function renderList(){
+  document.getElementById('legalNote').innerHTML = legalTexts[currentFilter];
+  const list = document.getElementById('list');
+  const filtered = currentFilter==='todos' ? people : people.filter(p=>p.type===currentFilter);
+
+  if(filtered.length===0){
+    list.innerHTML = `<div class="empty">Nenhum colaborador cadastrado ainda${currentFilter!=='todos' ? ' nesta categoria' : ''}. Clique em "Adicionar colaborador" para começar.</div>`;
+    return;
+  }
+
+  filtered.sort((a,b)=>{
+    const order = {bad:0, warn:1, accrue:2, ok:3, neutral:4};
+    const sa = a.type==='autonomo' ? (a.risk?'bad':'neutral') : computeCLTorEstagio(a).status;
+    const sb = b.type==='autonomo' ? (b.risk?'bad':'neutral') : computeCLTorEstagio(b).status;
+    return order[sa]-order[sb];
+  });
+
+  list.innerHTML = filtered.map(p=>{
+    const typeLabel = {clt:'CLT', estagio:'Estágio', autonomo:'Autônomo / PJ'}[p.type];
+    const pRanges = personRanges(p);
+    const vacLine = pRanges.length === 0 ? '' :
+      pRanges.length === 1
+        ? `<div class="detail-line"><span class="lbl">Marcado:</span> ${fmt(pRanges[0][0])} a ${fmt(pRanges[0][1])}</div>`
+        : `<div class="detail-line"><span class="lbl">Marcado (2 fases):</span><br>Fase 1: ${fmt(pRanges[0][0])} a ${fmt(pRanges[0][1])}<br>Fase 2: ${fmt(pRanges[1][0])} a ${fmt(pRanges[1][1])}</div>`;
+
+    if(p.type==='autonomo'){
+      const badgeClass = p.risk ? 'bad' : 'neutral';
+      const badgeText = p.risk ? 'Risco de vínculo' : 'Regido por contrato';
+      const auto = computeAutonomoSaldo(p);
+      return `
+        <div class="person-card">
+          <div class="person-head">
+            <div class="who">
+              <h3>${p.name}</h3>
+              <div class="meta">${p.role ? p.role+' · ' : ''}${typeLabel} · início em ${fmt(p.admission)}</div>
+            </div>
+            <div class="card-actions">
+              <span class="badge ${badgeClass}">${badgeText}</span>
+              <button class="icon-btn" onclick="openModal('${p.id}')">Editar</button>
+              <button class="icon-btn" onclick="removeP('${p.id}')">Remover</button>
+            </div>
+          </div>
+          ${p.risk ? `<div class="risk-flag">Atenção: a forma de prestação descrita pode configurar vínculo empregatício disfarçado (pejotização). Vale uma análise jurídica antes de manter esse formato.</div>` : ''}
+          ${auto ? `
+            <div class="timeline">
+              <div class="row"><span>Saldo do descanso combinado (ciclo ${fmt(auto.winStart)} a ${fmt(auto.winEnd)})</span><span>${auto.saldo} de ${auto.total} dia(s) restantes</span></div>
+              <div class="bar-track"><div class="bar-fill ${auto.saldo===0 ? 'fill-ok' : 'fill-accrue'}" style="width:${Math.min(100,(auto.usedDays/auto.total)*100)}%"></div></div>
+              <div class="hint">Considera o período marcado + eventos do escritório aplicáveis a autônomos. Isso é só um controle combinado — não é uma exigência legal.</div>
+            </div>
+          ` : `<div class="detail-line"><span class="lbl">Descanso:</span> definido em contrato — sem exigência legal automática, diferente de CLT e estágio. Informe "dias combinados" ao editar para calcular o saldo.</div>`}
+          ${vacLine}
+        </div>
+      `;
+    }
+
+    const c = computeCLTorEstagio(p);
+    const badgeMap = {accrue:'accrue', ok:'ok', warn:'warn', bad:'bad'};
+    const fillMap = {accrue:'fill-accrue', ok:'fill-ok', warn:'fill-warn', bad:'fill-bad'};
+    const remainingText = c.status==='bad'
+      ? `${Math.abs(c.remaining)} dia(s) além do prazo`
+      : `${c.remaining} dia(s) restantes`;
+
+    return `
+      <div class="person-card">
+        <div class="person-head">
+          <div class="who">
+            <h3>${p.name}</h3>
+            <div class="meta">${p.role ? p.role+' · ' : ''}${typeLabel} · admissão em ${fmt(p.admission)}</div>
+          </div>
+          <div class="card-actions">
+            <span class="badge ${badgeMap[c.status]}">${statusLabel(p.type, c.status)}</span>
+            <button class="icon-btn" onclick="openModal('${p.id}')">Editar</button>
+            <button class="icon-btn" onclick="removeP('${p.id}')">Remover</button>
+          </div>
+        </div>
+        <div class="timeline">
+          <div class="row"><span>${c.status==='accrue' ? 'Formando período aquisitivo' : 'Prazo para uso ('+ (p.type==='estagio'?'recesso':'férias') +')'}</span><span>${remainingText}</span></div>
+          <div class="bar-track"><div class="bar-fill ${fillMap[c.status]}" style="width:${c.pct}%"></div></div>
+        </div>
+        <div class="timeline">
+          <div class="row"><span>Saldo de dias no período de uso</span><span>${c.saldo} de ${c.totalDias} dia(s) restantes</span></div>
+          <div class="bar-track"><div class="bar-fill ${c.saldo===0 ? 'fill-ok' : 'fill-accrue'}" style="width:${Math.min(100,(c.usedDays/c.totalDias)*100)}%"></div></div>
+          <div class="hint">Considera o período marcado da pessoa + eventos do escritório aplicáveis (ex.: recesso do judiciário) dentro do prazo de uso.</div>
+        </div>
+        <div class="detail-line">
+          <span class="lbl">Período aquisitivo:</span> ${fmt(c.aqStart)} a ${fmt(c.aqEnd)}<br>
+          <span class="lbl">Prazo para uso:</span> ${fmt(c.conStart)} a ${fmt(c.conEnd)}
+          ${p.abono ? `<br><span class="lbl">Abono pecuniário:</span> vendeu 10 dias — restam 20 dias de descanso efetivo` : ''}
+        </div>
+        ${vacLine}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ---------------- render: agenda ---------------- */
+function changeMonth(delta){
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth()+delta, 1);
+  renderCalendar();
+}
+
+function renderCalendar(){
+  const year = calDate.getFullYear();
+  const month = calDate.getMonth();
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('calMonthLabel').textContent = `${monthNames[month]} de ${year}`;
+
+  const holidays = { ...holidaysForYear(year) };
+  if(month===0) Object.assign(holidays, holidaysForYear(year-1));
+  if(month===11) Object.assign(holidays, holidaysForYear(year+1));
+
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const filtered = currentFilter==='todos' ? people : people.filter(p=>p.type===currentFilter);
+  const withVac = filtered.filter(p=>personRanges(p).length > 0);
+  const relevantEvents = currentFilter==='todos' ? officeEvents : officeEvents.filter(ev=>ev.appliesTo.includes(currentFilter));
+
+  const cells = [];
+  for(let i=firstDow-1;i>=0;i--){
+    cells.push({num: daysInPrevMonth-i, out:true, iso:null});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({num:d, out:false, iso: toISO(new Date(year,month,d))});
+  }
+  while(cells.length % 7 !== 0){
+    cells.push({num: cells.length - firstDow - daysInMonth + 1, out:true, iso:null});
+  }
+
+  const dowLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let html = dowLabels.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+
+  html += cells.map(c=>{
+    if(c.out){
+      return `<div class="cal-cell out"><span class="daynum">${c.num}</span></div>`;
+    }
+    const hol = holidays[c.iso];
+    const evToday = relevantEvents.filter(ev => c.iso >= ev.start && c.iso <= ev.end);
+    const chips = [];
+    withVac.forEach(p=>{
+      const ranges = personRanges(p);
+      ranges.forEach((r, idx)=>{
+        if(c.iso >= r[0] && c.iso <= r[1]){
+          const phaseTag = ranges.length > 1 ? ` · F${idx+1}` : '';
+          chips.push(`<div class="cal-chip chip-${p.type}" title="${p.name}${phaseTag}">${p.name.split(' ')[0]}${phaseTag}</div>`);
+        }
+      });
+    });
+    const cellClass = hol ? 'holiday' : (evToday.length ? 'office-event' : '');
+    return `
+      <div class="cal-cell ${cellClass}">
+        <span class="daynum">${c.num}</span>
+        ${hol ? `<span class="holiday-tag">${hol.name}${hol.kind==='facultativo' ? ' *' : ''}</span>` : ''}
+        ${evToday.map(ev=>`<span class="event-tag" title="${ev.name}">${ev.name}</span>`).join('')}
+        ${chips.join('')}
+      </div>`;
+  }).join('');
+
+  document.getElementById('calGrid').innerHTML = html;
+
+  const monthHolidays = Object.values(holidays).filter(h => h.date.getMonth()===month && h.date.getFullYear()===year)
+    .sort((a,b)=>a.date-b.date);
+  const monthEvents = officeEvents.filter(ev=>{
+    const s = new Date(ev.start), e = new Date(ev.end);
+    const monthStart = new Date(year, month, 1), monthEnd = new Date(year, month+1, 0);
+    return s <= monthEnd && e >= monthStart;
+  });
+
+  const holidayRows = monthHolidays.map(h=>`<div class="hrow"><span>${fmt(h.date)} — ${h.name}</span><span class="htag">${h.kind==='facultativo' ? 'ponto facultativo' : 'feriado nacional'}</span></div>`).join('');
+  const eventRows = monthEvents.map(ev=>{
+    const tipos = ev.appliesTo.map(t=>({clt:'CLT',estagio:'Estágio',autonomo:'Autônomo'}[t])).join(', ');
+    return `<div class="hrow"><span>${fmt(ev.start)} a ${fmt(ev.end)} — ${ev.name}</span><span class="htag" style="display:flex; align-items:center; gap:8px;">${tipos || 'sem contrato marcado'} <button class="icon-btn" style="padding:3px 8px; font-size:10.5px;" onclick="removeEvent('${ev.id}')">remover</button></span></div>`;
+  }).join('');
+
+  document.getElementById('holidayList').innerHTML = `
+    <h3>Feriados, pontos facultativos e eventos do mês</h3>
+    ${(holidayRows + eventRows) === '' ? '<div class="hint">Nenhum neste mês.</div>' : holidayRows + eventRows}
+  `;
+}
+
+/* ---------------- eventos do escritório (ex.: recesso do judiciário) ---------------- */
+function openEventModal(id){
+  editingEventId = id || null;
+  if(id){
+    const ev = officeEvents.find(x=>x.id===id);
+    document.getElementById('eName').value = ev.name;
+    document.getElementById('eStart').value = ev.start;
+    document.getElementById('eEnd').value = ev.end;
+    document.getElementById('eEstagio').checked = ev.appliesTo.includes('estagio');
+    document.getElementById('eAutonomo').checked = ev.appliesTo.includes('autonomo');
+    document.getElementById('eClt').checked = ev.appliesTo.includes('clt');
+  } else {
+    document.getElementById('eName').value = '';
+    document.getElementById('eStart').value = '';
+    document.getElementById('eEnd').value = '';
+    document.getElementById('eEstagio').checked = true;
+    document.getElementById('eAutonomo').checked = true;
+    document.getElementById('eClt').checked = false;
+  }
+  document.getElementById('eventOverlay').classList.add('show');
+}
+function closeEventModal(){ document.getElementById('eventOverlay').classList.remove('show'); }
+
+function saveEvent(){
+  const name = document.getElementById('eName').value.trim();
+  const start = document.getElementById('eStart').value;
+  const end = document.getElementById('eEnd').value;
+  if(!name || !start || !end){ alert('Preencha nome, início e fim.'); return; }
+  if(end < start){ alert('A data final não pode ser antes da inicial.'); return; }
+  const appliesTo = [];
+  if(document.getElementById('eClt').checked) appliesTo.push('clt');
+  if(document.getElementById('eEstagio').checked) appliesTo.push('estagio');
+  if(document.getElementById('eAutonomo').checked) appliesTo.push('autonomo');
+  const ev = { id: editingEventId || String(Date.now()), name, start, end, appliesTo };
+  if(editingEventId){ officeEvents = officeEvents.map(x=>x.id===editingEventId ? ev : x); }
+  else{ officeEvents.push(ev); }
+  persistEvents();
+  closeEventModal();
+  renderCalendar();
+}
+
+function removeEvent(id){
+  if(!confirm('Remover este evento da agenda?')) return;
+  officeEvents = officeEvents.filter(e=>e.id!==id);
+  persistEvents();
+  renderCalendar();
+}
+
+
+/* ---------------- backup (export/import) ---------------- */
+function exportBackup(){
+  const data = { version: 2, exportedAt: new Date().toISOString(), people, officeEvents };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `backup-ferias-abff-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let imported, importedEvents;
+    try{
+      const data = JSON.parse(e.target.result);
+      imported = Array.isArray(data) ? data : data.people;
+      importedEvents = Array.isArray(data) ? [] : (data.officeEvents || []);
+      if(!Array.isArray(imported)) throw new Error('formato inválido');
+    }catch(err){
+      alert('Não foi possível ler este arquivo. Verifique se é um backup exportado por este painel.');
+      event.target.value = '';
+      return;
+    }
+    const add = confirm(`Este backup tem ${imported.length} colaborador(es) e ${importedEvents.length} evento(s).\n\nOK = adicionar aos registros atuais.\nCancelar = substituir todos os registros atuais por este backup.`);
+    if(add){
+      imported.forEach(p=>{
+        if(people.some(x=>x.id===p.id)) p.id = String(Date.now()) + Math.random().toString(36).slice(2,6);
+        people.push(p);
+      });
+      importedEvents.forEach(ev=>{
+        if(officeEvents.some(x=>x.id===ev.id)) ev.id = String(Date.now()) + Math.random().toString(36).slice(2,6);
+        officeEvents.push(ev);
+      });
+    } else {
+      people = imported;
+      officeEvents = importedEvents;
+    }
+    persistPeople();
+    persistEvents();
+    render();
+    alert('Backup importado com sucesso.');
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------------- export (planilha/pdf) ---------------- */
+function exportExcel(){
+  if(typeof XLSX === 'undefined'){ alert('Não foi possível carregar o módulo de exportação. Tente novamente.'); return; }
+  const rows = people.map(p=>{
+    const row = {
+      'Nome': p.name,
+      'Cargo/setor': p.role || '',
+      'Tipo de contrato': {clt:'CLT', estagio:'Estágio', autonomo:'Autônomo / PJ'}[p.type],
+      'Admissão/início': fmt(p.admission)
+    };
+    if(p.type === 'autonomo'){
+      row['Risco de vínculo empregatício'] = p.risk ? 'Sim — verificar' : 'Não sinalizado';
+    } else {
+      const c = computeCLTorEstagio(p);
+      row['Status'] = statusLabel(p.type, c.status);
+      row['Período aquisitivo'] = fmt(c.aqStart) + ' a ' + fmt(c.aqEnd);
+      row['Prazo para uso'] = fmt(c.conStart) + ' a ' + fmt(c.conEnd);
+      if(p.type === 'clt') row['Abono pecuniário (venda de 1/3)'] = p.abono ? 'Sim — 10 dias vendidos' : 'Não';
+    }
+    const ranges = personRanges(p);
+    row['Período marcado'] = ranges.map((r,i)=> (ranges.length>1?`Fase ${i+1}: `:'') + fmt(r[0]) + ' a ' + fmt(r[1])).join(' | ');
+    return row;
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = Object.keys(rows[0] || {Nome:''}).map(()=>({wch:22}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Controle de Férias');
+  const dateTag = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `controle-ferias-abff-${dateTag}.xlsx`);
+}
+
+/* ---------------- view / tab switching ---------------- */
+document.querySelectorAll('.view-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.v;
+    document.getElementById('painelView').style.display = currentView==='painel' ? 'block' : 'none';
+    document.getElementById('agendaView').style.display = currentView==='agenda' ? 'block' : 'none';
+    if(currentView==='agenda') renderCalendar();
+  });
+});
+
+function syncTabs(sourceId, active){
+  ['tabs','tabsAgenda'].forEach(id=>{
+    document.querySelectorAll(`#${id} .tab`).forEach(t=>{
+      t.classList.toggle('active', t.dataset.f===active);
+    });
+  });
+}
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab'); if(!tab) return;
+  currentFilter = tab.dataset.f; syncTabs('tabs', currentFilter); render();
+});
+document.getElementById('tabsAgenda').addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab'); if(!tab) return;
+  currentFilter = tab.dataset.f; syncTabs('tabsAgenda', currentFilter); render();
+});
+
+/* ---------------- form ---------------- */
+function onTypeChange(){
+  const t = document.getElementById('fType').value;
+  document.getElementById('admissionLabel').textContent = t==='autonomo' ? 'Data de início da prestação' : 'Data de admissão';
+  document.getElementById('lastReturnField').style.display = t==='autonomo' ? 'none' : 'block';
+  document.getElementById('autonomoNote').style.display = t==='autonomo' ? 'block' : 'none';
+  document.getElementById('diasContratadosField').style.display = t==='autonomo' ? 'block' : 'none';
+  document.getElementById('riskField').style.display = t==='autonomo' ? 'block' : 'none';
+  document.getElementById('abonoField').style.display = t==='clt' ? 'block' : 'none';
+  document.getElementById('vacLabel').textContent = t==='autonomo'
+    ? 'Período de descanso combinado (opcional)' : 'Período de férias/recesso marcado (opcional)';
+}
+
+function openModal(id){
+  editingId = id || null;
+  document.getElementById('modalTitle').textContent = id ? 'Editar colaborador' : 'Adicionar colaborador';
+  if(id){
+    const p = people.find(x=>x.id===id);
+    const ranges = personRanges(p);
+    document.getElementById('fName').value = p.name;
+    document.getElementById('fRole').value = p.role || '';
+    document.getElementById('fType').value = p.type;
+    document.getElementById('fAdmission').value = p.admission;
+    document.getElementById('fLastReturn').value = p.lastReturn || '';
+    document.getElementById('fRisk').checked = !!p.risk;
+    document.getElementById('fAbono').checked = !!p.abono;
+    document.getElementById('fDiasContratados').value = p.diasContratados || '';
+    document.getElementById('fVacStart').value = ranges[0] ? ranges[0][0] : '';
+    document.getElementById('fVacEnd').value = ranges[0] ? ranges[0][1] : '';
+    document.getElementById('fVac2Start').value = ranges[1] ? ranges[1][0] : '';
+    document.getElementById('fVac2End').value = ranges[1] ? ranges[1][1] : '';
+  } else {
+    document.getElementById('fName').value = '';
+    document.getElementById('fRole').value = '';
+    document.getElementById('fType').value = 'clt';
+    document.getElementById('fAdmission').value = '';
+    document.getElementById('fLastReturn').value = '';
+    document.getElementById('fRisk').checked = false;
+    document.getElementById('fAbono').checked = false;
+    document.getElementById('fDiasContratados').value = '';
+    document.getElementById('fVacStart').value = '';
+    document.getElementById('fVacEnd').value = '';
+    document.getElementById('fVac2Start').value = '';
+    document.getElementById('fVac2End').value = '';
+  }
+  onTypeChange();
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+
+function saveP(){
+  const name = document.getElementById('fName').value.trim();
+  const admission = document.getElementById('fAdmission').value;
+  if(!name || !admission){ alert('Preencha ao menos o nome e a data.'); return; }
+
+  const s1 = document.getElementById('fVacStart').value || null;
+  const e1 = document.getElementById('fVacEnd').value || null;
+  const s2 = document.getElementById('fVac2Start').value || null;
+  const e2 = document.getElementById('fVac2End').value || null;
+
+  const vacPhases = [];
+  if(s1 || e1){
+    if(!s1 || !e1){ alert('Preencha início e fim da Fase 1, ou deixe os dois em branco.'); return; }
+    if(e1 < s1){ alert('A Fase 1 tem data final antes da inicial.'); return; }
+    if(daysBetween(s1,e1)+1 < 5){ alert('A Fase 1 precisa ter pelo menos 5 dias.'); return; }
+    vacPhases.push({start:s1, end:e1});
+  }
+  if(s2 || e2){
+    if(!s2 || !e2){ alert('Preencha início e fim da Fase 2, ou deixe os dois em branco.'); return; }
+    if(e2 < s2){ alert('A Fase 2 tem data final antes da inicial.'); return; }
+    if(daysBetween(s2,e2)+1 < 5){ alert('A Fase 2 precisa ter pelo menos 5 dias.'); return; }
+    if(s1 && e1 && !(e2 < s1 || s2 > e1)){ alert('As duas fases não podem se sobrepor.'); return; }
+    vacPhases.push({start:s2, end:e2});
+  }
+
+  const diasContratadosVal = document.getElementById('fDiasContratados').value;
+  const p = {
+    id: editingId || String(Date.now()),
+    name,
+    role: document.getElementById('fRole').value.trim(),
+    type: document.getElementById('fType').value,
+    admission,
+    lastReturn: document.getElementById('fLastReturn').value || null,
+    risk: document.getElementById('fRisk').checked,
+    abono: document.getElementById('fAbono').checked,
+    diasContratados: diasContratadosVal ? Number(diasContratadosVal) : null,
+    vacPhases: vacPhases.length ? vacPhases : null,
+    vacStart: null, vacEnd: null
+  };
+  if(editingId){ people = people.map(x=>x.id===editingId ? p : x); }
+  else{ people.push(p); }
+  persistPeople();
+  closeModal();
+  render();
+}
+
+function removeP(id){
+  if(!confirm('Remover este colaborador do painel?')) return;
+  people = people.filter(p=>p.id!==id);
+  persistPeople();
+  render();
+}
+
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+document.getElementById('passOverlay').addEventListener('click', (e)=>{ if(e.target.id==='passOverlay') closePassModal(); });
+document.getElementById('eventOverlay').addEventListener('click', (e)=>{ if(e.target.id==='eventOverlay') closeEventModal(); });
+
+loadAll();
+</script>
+</body>
+</html>
